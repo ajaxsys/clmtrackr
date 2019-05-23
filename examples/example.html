@@ -1,65 +1,135 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<title>Face tracker</title>
-		<meta charset="utf-8">
-		<style>
-			#container {
-				position : relative;
-			}
 
-			#canvas {
-				position : absolute;
-				left : 0;
-				top : 0;
-			}
-		</style>
-	</head>
-	<body>
-		<script src="./js/libs/utils.js"></script>
-		<script src="../build/clmtrackr.js"></script>
-		<div id="content">
-			<h2>Example</h2>
-			<div id="container">
-				<video id="video" width="368" height="288" autoplay loop playsinline>
-					<source src="./media/franck.mp4" type="video/mp4"/>
-					<source src="./media/franck.webm" type="video/webm"/>
-				</video>
-				<canvas id="canvas" width="368" height="288"></canvas>
-			</div>
-			<p>Printing coordinates of the first 10 points in facial features:</p>
-			<p id="positions"></p>
-			<script>
-				var videoInput = document.getElementById('video');
+<head>
+    <title>Face tracker</title>
+    <meta charset="utf-8">
+    <style>
+        #container {
+            position: relative;
+        }
 
-				var ctracker = new clm.tracker();
-				ctracker.init();
-				ctracker.start(videoInput);
+        #canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+    </style>
+</head>
 
-				function positionLoop() {
-					requestAnimFrame(positionLoop);
-					var positions = ctracker.getCurrentPosition();
-					// do something with the positions ...
-					// print the positions
-					var positionString = "";
-					if (positions) {
-						for (var p = 0;p < 10;p++) {
-							positionString += "featurepoint "+p+" : ["+positions[p][0].toFixed(2)+","+positions[p][1].toFixed(2)+"]<br/>";
-						}
-						document.getElementById('positions').innerHTML = positionString;
-					}
-				}
-				positionLoop();
+<body>
+    <script src="./js/libs/utils.js"></script>
+    <script src="./js/libs/lodash.min.js"></script>
+    <script src="../build/clmtrackr.js"></script>
+    <div id="content">
+        <h2>Example</h2>
+        <div id="container">
+            <video id="video"
+                   width="368"
+                   height="288"
+                   autoplay
+                   loop
+                   playsinline>
+                <source src="./media/franck.mp4"
+                        type="video/mp4" />
+                <source src="./media/franck.webm"
+                        type="video/webm" />
+            </video>
+            <canvas id="canvas"
+                    width="368"
+                    height="288"></canvas>
+            <img id='debugImage' />
+        </div>
+        <p>Printing coordinates of the first 10 points in facial features:</p>
+        <p id="positions"></p>
+        <script>
+            const videoInput = document.getElementById('video');
+            const canvasInput = document.getElementById('canvas');
+            const out = document.getElementById('out')
 
-				var canvasInput = document.getElementById('canvas');
-				var cc = canvasInput.getContext('2d');
-				function drawLoop() {
-					requestAnimFrame(drawLoop);
-					cc.clearRect(0, 0, canvasInput.width, canvasInput.height);
-					ctracker.draw(canvasInput);
-				}
-				drawLoop();
-			</script>
-		</div>
-	</body>
+            const ctx = canvasInput.getContext('2d');
+
+            const ctracker = new clm.tracker();
+            ctracker.init();
+            ctracker.start(videoInput);
+            let posX = 0;
+            let posY = 0;
+            let width = 0;
+            let height = 0;
+
+            function positionLoop() {
+                requestAnimFrame(positionLoop);
+                const positions = ctracker.getCurrentPosition();
+                // do something with the positions ...
+                // print the positions
+                let positionString = "";
+                if (positions) {
+                    posX = _.minBy(positions, p => p[0])[0];
+                    posY = _.minBy(positions, p => p[1])[1];
+                    const maxLeft = _.maxBy(positions, p => p[0])[0];
+                    const maxHeight = _.maxBy(positions, p => p[1])[1];
+                    width = maxLeft - posX;
+                    height = maxHeight - posY;
+                    // document.getElementById('positions').innerHTML = `x=${posX}, y=${posY}, width=${maxLeft - posX}, height=${maxHeight - posY}`;
+                }
+            }
+            positionLoop();
+
+            function drawLoop() {
+                requestAnimFrame(drawLoop);
+                ctx.clearRect(0, 0, canvasInput.width, canvasInput.height);
+                ctracker.draw(canvasInput);
+                // Draw my rect
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(posX, posY, width, height);
+                // const trackerImgData = ctx.getImageData(posX, posY, maxLeft - posX, maxHeight - posY)
+                setTimeout(
+                    () => {
+                        // draw green line to image TODO
+                        // crop_img(ctx, trackerImgData);
+                        crop_video();
+                    },
+                    50);
+            }
+            drawLoop();
+
+            const imgTag = document.getElementById('debugImage');
+            function crop_img(ctx, trackerImgData) {}
+            function crop_video() {
+                const squareSize = 160;
+                // 画像切り取り
+                var canvasTmp = document.createElement("canvas");
+                canvasTmp.width = width;
+                canvasTmp.height = height;
+                var ctxTmp = canvasTmp.getContext("2d");
+                ctxTmp.rect(0, 0,  width, height);
+                // ctxTmp.fillStyle = 'white';
+                // ctxTmp.fill();
+                // ctxTmp.putImageData(crop.binarizer.source, 0, 0);
+                ctxTmp.drawImage(videoInput,
+                    posX, posY, width, height,
+                    0, 0, width, height)
+                // ctxTmp.putImageData(
+                //     trackerImgData,
+                //     0, 0);
+
+                // ctxTmp.putImageData(
+                //     trackerImgData,
+                //     0, 0);
+
+                if (width > height) {
+                    imgTag.setAttribute('width', width + 'px');
+                    imgTag.setAttribute('height', 'auto');
+                } else if (height > 0) {
+                    imgTag.setAttribute('width', 'auto');
+                    imgTag.setAttribute('height', height + 'px');
+                }
+
+                imgTag.setAttribute('src', canvasTmp.toDataURL("image/png"));
+            }
+
+        </script>
+    </div>
+</body>
+
 </html>
