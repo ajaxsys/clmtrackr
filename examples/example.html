@@ -39,6 +39,7 @@
                     width="368"
                     height="288"></canvas>
             <img id='debugImage' />
+            <img id='debugImageSmaller' />
         </div>
         <p>Printing coordinates of the first 10 points in facial features:</p>
         <p id="positions"></p>
@@ -121,6 +122,7 @@
             drawLoop();
 
             const imgTag = document.getElementById('debugImage');
+            const imgTagSmaller = document.getElementById('debugImageSmaller');
             function crop_img(ctx, trackerImgData) {}
             function crop_video() {
                 // 画像切り取り
@@ -152,6 +154,44 @@
                 }
 
                 imgTag.setAttribute('src', canvasTmp.toDataURL("image/png"));
+
+                resize_image(imgTag, imgTagSmaller)
+            }
+
+            function resize_image(src, dst, type, quality) {
+                var tmp = new Image(),
+                    canvas, context, cW, cH;
+
+                type = type || 'image/jpeg';
+                quality = quality || 0.92;
+
+                cW = src.naturalWidth;
+                cH = src.naturalHeight;
+
+                tmp.src = src.src;
+                tmp.onload = function () {
+
+                    canvas = document.createElement('canvas');
+
+                    if (cW < src.width) cW = src.width;
+                    if (cH < src.height) cH = src.height;
+
+                    cW /= 2;
+                    cH /= 2;
+
+                    canvas.width = cW;
+                    canvas.height = cH;
+                    context = canvas.getContext('2d');
+                    context.drawImage(tmp, 0, 0, cW, cH);
+
+                    dst.src = canvas.toDataURL(type, quality);
+
+                    if (cW <= src.width || cH <= src.height)
+                        return;
+
+                    tmp.src = dst.src;
+                }
+
             }
 
         </script>
