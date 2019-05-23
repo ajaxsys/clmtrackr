@@ -18,6 +18,7 @@
 </head>
 
 <body>
+    <script src="./js/libs/jquery.min.js"></script>
     <script src="./js/libs/utils.js"></script>
     <script src="./js/libs/lodash.min.js"></script>
     <script src="../build/clmtrackr.js"></script>
@@ -38,8 +39,8 @@
             <canvas id="canvas"
                     width="368"
                     height="288"></canvas>
-            <img id='debugImage' />
-            <img id='debugImageSmaller' />
+            変動：<img id='croppedImage' />
+            固定：<img id='resizedImage' />
         </div>
         <p>Printing coordinates of the first 10 points in facial features:</p>
         <p id="positions"></p>
@@ -53,10 +54,17 @@
             const ctracker = new clm.tracker();
             ctracker.init();
             ctracker.start(videoInput);
+
             let posX = 0;
             let posY = 0;
             let width = 0;
             let height = 0;
+
+            const croppedImageTag = document.getElementById('croppedImage');
+            let croppedImage = '';
+
+            const resizedImageTag = document.getElementById('resizedImage');
+            let resizedImage = '';
 
             function positionLoop() {
                 requestAnimFrame(positionLoop);
@@ -121,8 +129,33 @@
             }
             drawLoop();
 
-            const imgTag = document.getElementById('debugImage');
-            const imgTagSmaller = document.getElementById('debugImageSmaller');
+            // TODO use socket
+            function ajaxSendServerLoop_ajax() {
+                // try max fps / success then do next
+                const url = '/api/emotion-detect'
+                const data = resizedImage;
+                $.ajax({
+                    type: 'POST',
+                    url: url,
+                    data: data,
+                    success: (res) => {
+                        console.log('Data should means smile or cry', res)
+                    },
+                    complete: () => {
+                        ajaxSendServerLoop(); // Recursive
+                    },
+                    dataType: 'json'
+                });
+            }
+            function ajaxSendServerLoop() {
+                setInterval(() => {
+                    console.log('Size of crop_video:', croppedImage.length, croppedImage);
+                    console.log('Size of resize_image:', resizedImage.length, resizedImage)
+                    console.log('===============')
+                }, 50); // 1000 / 20 fps = 50 ms
+            }
+            ajaxSendServerLoop();
+
             function crop_img(ctx, trackerImgData) {}
             function crop_video() {
                 // 画像切り取り
@@ -146,24 +179,27 @@
                 //     0, 0);
 
                 if (width > height) {
-                    imgTag.setAttribute('width', width + 'px');
-                    imgTag.setAttribute('height', 'auto');
+                    croppedImageTag.setAttribute('width', width + 'px');
+                    croppedImageTag.setAttribute('height', 'auto');
                 } else if (height > 0) {
-                    imgTag.setAttribute('width', 'auto');
-                    imgTag.setAttribute('height', height + 'px');
+                    croppedImageTag.setAttribute('width', 'auto');
+                    croppedImageTag.setAttribute('height', height + 'px');
                 }
 
-                imgTag.setAttribute('src', canvasTmp.toDataURL("image/png"));
+                croppedImage = canvasTmp.toDataURL("image/jpeg", 0.8);
+                croppedImageTag.setAttribute('src', croppedImage);
+                // console.log('Size of crop_video:', croppedImage.length)
 
-                resize_image(imgTag, imgTagSmaller)
+                resize_image(croppedImageTag, resizedImageTag)
             }
 
+            const MAX_SEND_SIZE = 60;
             function resize_image(src, dst, type, quality) {
-                var tmp = new Image(),
+                let tmp = new Image(),
                     canvas, context, cW, cH;
 
                 type = type || 'image/jpeg';
-                quality = quality || 0.92;
+                quality = quality || 0.8;
 
                 cW = src.naturalWidth;
                 cH = src.naturalHeight;
@@ -176,15 +212,19 @@
                     if (cW < src.width) cW = src.width;
                     if (cH < src.height) cH = src.height;
 
-                    cW /= 2;
-                    cH /= 2;
+                    // cW /= 2;
+                    // cH /= 2;
+                    cW = cW < MAX_SEND_SIZE ? cW : MAX_SEND_SIZE;
+                    cH = cH < MAX_SEND_SIZE ? cH : MAX_SEND_SIZE;
 
                     canvas.width = cW;
                     canvas.height = cH;
                     context = canvas.getContext('2d');
                     context.drawImage(tmp, 0, 0, cW, cH);
 
-                    dst.src = canvas.toDataURL(type, quality);
+                    resizedImage =  canvas.toDataURL(type, quality);
+                    dst.src = resizedImage;
+                    // console.log('Size of resize_image:', resizedImage.length)
 
                     if (cW <= src.width || cH <= src.height)
                         return;
