@@ -108,13 +108,16 @@
                 ctx.strokeStyle = "red";
                 ctx.strokeRect(posX, posY, width, height);
                 // const trackerImgData = ctx.getImageData(posX, posY, maxLeft - posX, maxHeight - posY)
-                setTimeout(
-                    () => {
-                        // draw green line to image TODO
-                        // crop_img(ctx, trackerImgData);
-                        crop_video();
-                    },
-                    50);
+
+                // setTimeout VS requestAnimFrame: https://liginc.co.jp/web/js/130758
+                // setTimeout(
+                //     () => {
+                //         // draw green line to image TODO
+                //         // crop_img(ctx, trackerImgData);
+                //         crop_video();
+                //     },
+                //     50);
+                requestAnimFrame(crop_video)
             }
             drawLoop();
 
