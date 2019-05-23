@@ -71,6 +71,31 @@
                     width = maxLeft - posX;
                     height = maxHeight - posY;
                     // document.getElementById('positions').innerHTML = `x=${posX}, y=${posY}, width=${maxLeft - posX}, height=${maxHeight - posY}`;
+
+                    // Ajust to get more Ears
+                    // if (height > width) {
+                    //     const xPercent = 0.3, yPercent = 0.6;
+                    //     const moreLefter = posX - width * xPercent;
+                    //     posX = moreLefter > 0 ? moreLefter : 0;
+                    //     const moreHeigter = posY - height * yPercent;
+                    //     posY = moreHeigter > 0 ? moreHeigter : 0;
+
+                    //     width = width * (1 + xPercent * 2);
+                    //     height = height * (1 + yPercent);
+                    // }
+
+                    // Ajust to rect
+                    if (height > width) {
+                        const yPercent = 0.6;
+                        let newHeight = height * (1 + yPercent); // 増高
+                        newHeight = newHeight > canvasInput.height ? canvasInput.height : newHeight; // MAX高に超えないよう
+                        const moreHeigterY = posY - (newHeight - height); // Yも増高
+                        posY = moreHeigterY > 0 ? moreHeigterY : 0;// Yを枠に超えないよう
+                        height = newHeight;
+
+                        posX = posX - (height - width) / 2
+                        width = height;
+                    }
                 }
             }
             positionLoop();
